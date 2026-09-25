@@ -68,7 +68,7 @@ const CONSTITUTION = [
   "Avoid unnecessary high-interest debt.",
   "Diversify investments geographically and by asset class.",
   "Do not allow any single speculative investment to threaten financial independence.",
-  "Company shares are a controlled \u201cbet on myself,\u201d not the foundation of the portfolio.",
+  "Company shares are a controlled “bet on myself,” not the foundation of the portfolio.",
   "Use TFSA and RA tax advantages deliberately.",
   "Use windfalls strategically rather than allowing lifestyle inflation.",
   "Property is optional, not mandatory.",
@@ -95,7 +95,7 @@ const DEFAULT_STATE = {
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const fmt = (n) => {
   const v = Number(n) || 0;
-  const sign = v < 0 ? "\u2212" : "";
+  const sign = v < 0 ? "−" : "";
   return `${sign}R${Math.abs(Math.round(v)).toLocaleString("en-ZA")}`;
 };
 const pct = (n, d = 1) => `${(Number(n) || 0).toFixed(d)}%`;
@@ -257,7 +257,7 @@ export default function App() {
   if (!loaded) {
     return (
       <div style={{ minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, color: C.textFaint, fontFamily: "'Inter', sans-serif" }}>
-        Loading your ledger\u2026
+        Loading your ledger…
       </div>
     );
   }
@@ -342,9 +342,9 @@ function Header({ month, setMonth, state }) {
           </h1>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={() => setMonth((m) => shiftMonth(m, -1))} style={{ ...btnBase, background: "transparent", padding: "6px 10px" }}>{"\u2190"}</button>
+          <button onClick={() => setMonth((m) => shiftMonth(m, -1))} style={{ ...btnBase, background: "transparent", padding: "6px 10px" }}>{"←"}</button>
           <div className="fp-num" style={{ fontSize: 13, minWidth: 130, textAlign: "center", color: C.textFaint }}>{monthLabel(month)}</div>
-          <button onClick={() => setMonth((m) => shiftMonth(m, 1))} style={{ ...btnBase, background: "transparent", padding: "6px 10px" }}>{"\u2192"}</button>
+          <button onClick={() => setMonth((m) => shiftMonth(m, 1))} style={{ ...btnBase, background: "transparent", padding: "6px 10px" }}>{"→"}</button>
           <button onClick={() => setMonth(thisMonthKey())} style={{ ...btnBase, background: "transparent", padding: "6px 10px", fontSize: 11, color: C.textFaint }}>today</button>
         </div>
       </div>
@@ -399,7 +399,7 @@ function buildAlerts(state, month) {
     const cryptoVal = portfolioAccounts.filter((a) => a.type === "Crypto").reduce((sum, a) => sum + Number(a.balance), 0);
     const companyPct = (companyVal / portfolioTotal) * 100;
     const cryptoPct = (cryptoVal / portfolioTotal) * 100;
-    if (companyPct > s.companyMax) alerts.push({ tone: "rust", text: `Company shares are ${pct(companyPct)} of portfolio \u2014 above the ${s.companyMax}% constitutional maximum.` });
+    if (companyPct > s.companyMax) alerts.push({ tone: "rust", text: `Company shares are ${pct(companyPct)} of portfolio — above the ${s.companyMax}% constitutional maximum.` });
     else if (companyPct > s.companyTarget) alerts.push({ tone: "amber", text: `Company shares are ${pct(companyPct)} of portfolio, above the ${s.companyTarget}% target.` });
     if (cryptoPct > s.cryptoTarget + 1) alerts.push({ tone: "amber", text: `Crypto is ${pct(cryptoPct)} of portfolio, above the ${s.cryptoTarget}% target.` });
 
@@ -422,7 +422,7 @@ function buildAlerts(state, month) {
   if (carLoan && carLoan.monthlyPayment) {
     const incomeBudget = INCOME_CATEGORIES.reduce((sum, c) => sum + (Number(budgetMap[c]) || 0), 0) || computeMonthFigures(state, month).incomeActual;
     if (incomeBudget > 0 && Number(carLoan.monthlyPayment) / incomeBudget > 0.2) {
-      alerts.push({ tone: "amber", text: `Car repayment is ${pct((Number(carLoan.monthlyPayment) / incomeBudget) * 100)} of income \u2014 high relative to earnings.` });
+      alerts.push({ tone: "amber", text: `Car repayment is ${pct((Number(carLoan.monthlyPayment) / incomeBudget) * 100)} of income — high relative to earnings.` });
     }
   }
 
@@ -465,7 +465,7 @@ function Dashboard({ state, month, setTab }) {
 
       {/* Flow strip */}
       <Card>
-        <Label>Income \u2192 Expenses \u2192 Free cash flow \u2192 Investment allocation</Label>
+        <Label>Income → Expenses → Free cash flow → Investment allocation</Label>
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, marginTop: 8 }}>
           <FlowFigure label="Income" value={fig.incomeActual} budget={fig.incomeBudget} />
           <Arrow />
@@ -501,7 +501,7 @@ function Dashboard({ state, month, setTab }) {
       <Card>
         <Label>Alerts</Label>
         {alerts.length === 0 ? (
-          <div style={{ color: C.textFaint, fontSize: 13, marginTop: 6 }}>Nothing flagged \u2014 current position is within your constitutional guardrails.</div>
+          <div style={{ color: C.textFaint, fontSize: 13, marginTop: 6 }}>Nothing flagged — current position is within your constitutional guardrails.</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
             {alerts.map((a, i) => (
@@ -515,9 +515,9 @@ function Dashboard({ state, month, setTab }) {
       </Card>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Button variant="ghost" onClick={() => setTab("budget")}>Review budget \u2192</Button>
-        <Button variant="ghost" onClick={() => setTab("transactions")}>Add transactions \u2192</Button>
-        <Button variant="ghost" onClick={() => setTab("networth")}>Update accounts \u2192</Button>
+        <Button variant="ghost" onClick={() => setTab("budget")}>Review budget →</Button>
+        <Button variant="ghost" onClick={() => setTab("transactions")}>Add transactions →</Button>
+        <Button variant="ghost" onClick={() => setTab("networth")}>Update accounts →</Button>
       </div>
     </div>
   );
@@ -547,7 +547,7 @@ function FlowFigure({ label, value, budget, invert, highlight }) {
     </div>
   );
 }
-const Arrow = () => <span style={{ color: C.textFainter, fontSize: 16 }}>{"\u2192"}</span>;
+const Arrow = () => <span style={{ color: C.textFainter, fontSize: 16 }}>{"→"}</span>;
 
 /* ---------------------------------------------------------------------- */
 /*  Budget                                                                  */
@@ -572,7 +572,7 @@ function Budget({ state, patch, month, setMonth }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
           <Label>{title}</Label>
           <div className="fp-num" style={{ fontSize: 12, color: C.textFaint }}>
-            budget {fmt(totalBudget)} &nbsp;\u00b7&nbsp; actual {fmt(totalActual)}
+            budget {fmt(totalBudget)} &nbsp;·&nbsp; actual {fmt(totalActual)}
           </div>
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -613,7 +613,7 @@ function Budget({ state, patch, month, setMonth }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, margin: 0 }}>Budget vs actual \u2014 {monthLabel(month)}</h2>
+        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, margin: 0 }}>Budget vs actual — {monthLabel(month)}</h2>
       </div>
       <Section title="Income" cats={INCOME_CATEGORIES} />
       <Section title="Expenses" cats={EXPENSE_CATEGORIES} />
@@ -643,7 +643,7 @@ function Transactions({ state, patch, month, setMonth, importOpen, setImportOpen
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, margin: 0 }}>Transactions \u2014 {monthLabel(month)}</h2>
+        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, margin: 0 }}>Transactions — {monthLabel(month)}</h2>
         <Button variant="primary" onClick={() => setImportOpen(true)}><Upload size={14} /> Import statement</Button>
       </div>
 
@@ -690,7 +690,7 @@ function Transactions({ state, patch, month, setMonth, importOpen, setImportOpen
                   <td style={{ padding: "8px 12px" }}>{t.description}</td>
                   <td style={{ padding: "8px 12px" }}><Tag tone="faint">{t.category}</Tag></td>
                   <td style={{ padding: "8px 12px", color: C.textFaint }}>{t.type}</td>
-                  <td className="fp-num" style={{ padding: "8px 12px", textAlign: "right", color: isIncomeCat(t.category) ? C.moss : C.text }}>{isIncomeCat(t.category) ? "+" : "\u2212"}{fmt(t.amount)}</td>
+                  <td className="fp-num" style={{ padding: "8px 12px", textAlign: "right", color: isIncomeCat(t.category) ? C.moss : C.text }}>{isIncomeCat(t.category) ? "+" : "−"}{fmt(t.amount)}</td>
                   <td style={{ padding: "8px 12px" }}><button onClick={() => removeTxn(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: C.textFainter }}><Trash2 size={13} /></button></td>
                 </tr>
               ))}
@@ -809,7 +809,7 @@ function ImportModal({ state, patch, onClose }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <Label>PDF bank statement</Label>
                 <div style={{ fontSize: 12, color: C.textFaint }}>
-                  Upload a statement PDF. Rows are extracted automatically \u2014 dates, descriptions and amounts vary a lot
+                  Upload a statement PDF. Rows are extracted automatically — dates, descriptions and amounts vary a lot
                   by bank, so review every row carefully on the next screen before importing.
                 </div>
                 <input
@@ -822,7 +822,7 @@ function ImportModal({ state, patch, onClose }) {
                 />
                 {pdfStatus === "loading" && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textFaint }}>
-                    <FileText size={13} /> Reading PDF\u2026
+                    <FileText size={13} /> Reading PDF…
                   </div>
                 )}
                 {pdfStatus === "error" && (
@@ -841,7 +841,7 @@ function ImportModal({ state, patch, onClose }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ fontSize: 12, color: C.textFaint }}>Upload a bank statement CSV export, or paste CSV text directly.</div>
                 <input ref={fileInput} type="file" accept=".csv,text/csv" onChange={handleFile} style={{ fontSize: 13, color: C.textFaint }} />
-                <div style={{ fontSize: 12, color: C.textFainter }}>\u2014 or \u2014</div>
+                <div style={{ fontSize: 12, color: C.textFainter }}>— or —</div>
                 <textarea value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="date,description,amount&#10;2026-08-01,Salary,45000&#10;2026-08-02,Woolworths,-1250" rows={6} style={{ ...inputStyle, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }} />
                 <div><Button variant="primary" onClick={() => raw && parseCsv(raw)} disabled={!raw}>Parse pasted CSV</Button></div>
               </div>
@@ -1052,7 +1052,7 @@ function Investments({ state, patch }) {
     return (
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.line}` }}>
         <div style={{ display: "flex", alignItems: "center" }}><Dot color={col} />{label}</div>
-        <div className="fp-num" style={{ fontSize: 13 }}>{fmt(val)} \u00b7 {pct(p)} <span style={{ color: C.textFainter }}>(target {target}%{max ? `, max ${max}%` : ""})</span></div>
+        <div className="fp-num" style={{ fontSize: 13 }}>{fmt(val)} · {pct(p)} <span style={{ color: C.textFainter }}>(target {target}%{max ? `, max ${max}%` : ""})</span></div>
       </div>
     );
   };
@@ -1129,7 +1129,7 @@ function Assumptions({ state, patch }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, margin: 0 }}>Assumptions</h2>
-      <div style={{ fontSize: 13, color: C.textFaint }}>Numbers that are currently uncertain \u2014 child maintenance, future income, settlement values. The app never silently turns these into actuals.</div>
+      <div style={{ fontSize: 13, color: C.textFaint }}>Numbers that are currently uncertain — child maintenance, future income, settlement values. The app never silently turns these into actuals.</div>
 
       <Card>
         <Label>Add assumption</Label>
@@ -1159,14 +1159,14 @@ function Assumptions({ state, patch }) {
                     {overdue && <Tag tone="assumption">Review overdue</Tag>}
                   </div>
                   <div style={{ fontSize: 12, color: C.textFaint, marginTop: 4 }}>
-                    Source: {a.source || "\u2014"} \u00b7 Confidence: {a.confidence} \u00b7 Created {a.dateCreated} {a.reviewDate && `\u00b7 Review by ${a.reviewDate}`}
+                    Source: {a.source || "—"} · Confidence: {a.confidence} · Created {a.dateCreated} {a.reviewDate && `· Review by ${a.reviewDate}`}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
                   <div><Label>Assumed</Label><div className="fp-num">{fmt(a.value)}</div></div>
                   <div>
                     <Label>Actual (once known)</Label>
-                    <Input type="number" value={a.actualValue} placeholder="\u2014" onChange={(e) => update(a.id, "actualValue", e.target.value)} style={{ width: 110 }} />
+                    <Input type="number" value={a.actualValue} placeholder="—" onChange={(e) => update(a.id, "actualValue", e.target.value)} style={{ width: 110 }} />
                   </div>
                   {a.actualValue && (
                     <div><Label>Difference</Label><div className="fp-num" style={{ color: Number(a.actualValue) - Number(a.value) >= 0 ? C.moss : C.rust }}>{fmt(Number(a.actualValue) - Number(a.value))}</div></div>
@@ -1221,11 +1221,11 @@ function Constitution({ state, patch, setState }) {
       <Card>
         <Label>Data vocabulary</Label>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 12, marginTop: 8 }}>
-          <div><Tag tone="actual">Actual</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>Confirmed \u2014 salary received, balances, settled expenses.</div></div>
+          <div><Tag tone="actual">Actual</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>Confirmed — salary received, balances, settled expenses.</div></div>
           <div><Tag tone="faint">Budget</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>What you've planned to spend or receive.</div></div>
-          <div><Tag tone="assumption">Assumption</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>Currently uncertain \u2014 may change. Never silently promoted to actual.</div></div>
-          <div><Tag tone="target">Target</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>A deliberate objective \u2014 target rent, allocation, TFSA contribution.</div></div>
-          <div><Tag tone="forecast">Forecast</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>Calculated projection based on assumptions \u2014 never a guarantee.</div></div>
+          <div><Tag tone="assumption">Assumption</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>Currently uncertain — may change. Never silently promoted to actual.</div></div>
+          <div><Tag tone="target">Target</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>A deliberate objective — target rent, allocation, TFSA contribution.</div></div>
+          <div><Tag tone="forecast">Forecast</Tag><div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>Calculated projection based on assumptions — never a guarantee.</div></div>
         </div>
       </Card>
 
