@@ -768,6 +768,13 @@ function Transactions({ state, patch, month, setMonth, importOpen, setImportOpen
   );
 }
 
+const CSV_TEMPLATE = [
+  "date,description,amount",
+  "2026-08-01,Salary,45000",
+  "2026-08-02,Woolworths,-1250",
+  "2026-08-03,Rent,-15000",
+].join("\n") + "\n";
+
 function ImportModal({ state, patch, onClose }) {
   const [step, setStep] = useState(1);
   const [raw, setRaw] = useState("");
@@ -779,6 +786,14 @@ function ImportModal({ state, patch, onClose }) {
   const [pdfError, setPdfError] = useState("");
   const fileInput = useRef(null);
   const pdfInput = useRef(null);
+
+  const downloadTemplate = () => {
+    const blob = new Blob([CSV_TEMPLATE], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "financial-position-template.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const parseCsv = (text) => {
     const result = Papa.parse(text, { header: true, skipEmptyLines: true });
@@ -914,7 +929,10 @@ function ImportModal({ state, patch, onClose }) {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ fontSize: 12, color: C.textFaint }}>Upload a bank statement CSV export, or paste CSV text directly.</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ fontSize: 12, color: C.textFaint }}>Upload a bank statement CSV export, or paste CSV text directly.</div>
+                  <Button variant="ghost" onClick={downloadTemplate} style={{ padding: "4px 8px", fontSize: 12 }}><Download size={12} /> Download template</Button>
+                </div>
                 <input ref={fileInput} type="file" accept=".csv,text/csv" onChange={handleFile} style={{ fontSize: 13, color: C.textFaint }} />
                 <div style={{ fontSize: 12, color: C.textFainter }}>— or —</div>
                 <textarea value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="date,description,amount&#10;2026-08-01,Salary,45000&#10;2026-08-02,Woolworths,-1250" rows={6} style={{ ...inputStyle, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }} />
@@ -961,7 +979,7 @@ function ImportModal({ state, patch, onClose }) {
                       <tr key={r.id} style={{ borderTop: `1px solid ${C.line}` }}>
                         <td style={{ padding: "5px 8px" }}><Input value={r.date} onChange={(e) => updateRow(r.id, "date", e.target.value)} style={{ padding: "4px 6px", fontSize: 12 }} /></td>
                         <td style={{ padding: "5px 8px", minWidth: 160 }}><Input value={r.description} onChange={(e) => updateRow(r.id, "description", e.target.value)} style={{ padding: "4px 6px", fontSize: 12 }} /></td>
-                        <td className="fp-num" style={{ padding: "5px 8px", textAlign: "right" }}>{fmt(r.amount)}</td>
+                        <td className="fp-num" style={{ padding: "5px 8px", textAlign: "right", color: r.negative ? C.text : C.moss }}>{r.negative ? "−" : "+"}{fmt(r.amount)}</td>
                         <td style={{ padding: "5px 8px" }}>
                           <Select value={r.category} onChange={(e) => updateRow(r.id, "category", e.target.value)} style={{ padding: "4px 6px", fontSize: 12 }}>
                             {categoriesFor(r.negative ? -1 : 1).map((c) => <option key={c} value={c}>{c}</option>)}
