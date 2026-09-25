@@ -86,6 +86,7 @@ const DEFAULT_STATE = {
   budgets: {},
   assumptions: [],
   snapshots: [],
+  categoryRules: { exact: {}, keyword: {} },
 };
 
 /* ---------------------------------------------------------------------- */
@@ -114,6 +115,42 @@ const shiftMonth = (key, delta) => {
 };
 const isIncomeCat = (cat) => INCOME_CATEGORIES.includes(cat);
 
+// Categories selectable for a given transaction amount: negative amounts are
+// spending, so only expense categories are offered to keep the picker short
+// and to stop income categories being chosen for money going out.
+const categoriesFor = (amount) => (Number(amount) < 0 ? EXPENSE_CATEGORIES : ALL_CATEGORIES);
+
+const normalizeDesc = (desc) =>
+  (desc || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+const firstToken = (norm) => norm.split(" ")[0] || "";
+
+// Looks up a category previously learned for this description, constrained
+// to categories still valid for this amount's sign. Exact normalised-text
+// matches win; a first-word match is the fallback for new merchant strings
+// ("Woolworths Rosebank" matching a rule learned from "Woolworths Sandton").
+function suggestCategory(description, rules, amount) {
+  const norm = normalizeDesc(description);
+  if (!norm || !rules) return null;
+  const allowed = categoriesFor(amount);
+  const exact = rules.exact?.[norm];
+  if (exact && allowed.includes(exact)) return exact;
+  const byKeyword = rules.keyword?.[firstToken(norm)];
+  if (byKeyword && allowed.includes(byKeyword)) return byKeyword;
+  return null;
+}
+
+// Remembers this description → category pairing so future transactions with
+// a similar description are pre-categorised the same way.
+function learnCategory(rules, description, category) {
+  const norm = normalizeDesc(description);
+  if (!norm || !category) return rules;
+  const tok = firstToken(norm);
+  return {
+    exact: { ...(rules?.exact || {}), [norm]: category },
+    keyword: tok ? { ...(rules?.keyword || {}), [tok]: category } : { ...(rules?.keyword || {}) },
+  };
+}
+
 function statusColor(variancePct, invert = false) {
   // variancePct: actual vs budget, positive = over budget for expenses
   const v = invert ? -variancePct : variancePct;
@@ -136,7 +173,15 @@ function useAppState() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        setState({ ...DEFAULT_STATE, ...parsed, settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) } });
+        setState({
+          ...DEFAULT_STATE,
+          ...parsed,
+          settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+          categoryRules: {
+            exact: { ...(parsed.categoryRules?.exact || {}) },
+            keyword: { ...(parsed.categoryRules?.keyword || {}) },
+          },
+        });
       }
     } catch (e) {
       // no saved state yet
@@ -630,13 +675,32 @@ function Budget({ state, patch, month, setMonth }) {
 /* ---------------------------------------------------------------------- */
 
 function Transactions({ state, patch, month, setMonth, importOpen, setImportOpen }) {
-  const [form, setForm] = useState({ date: todayStr(), description: "", amount: "", category: "Other", type: "Variable", accountId: "" });
+  const [form, setForm] = useState({ date: todayStr(), description: "", amount: "", category: "Other", type: "Variable", accountId: "", categoryTouched: false });
   const monthTxns = state.transactions.filter((t) => monthKey(t.date) === month).sort((a, b) => b.date.localeCompare(a.date));
+  const categoryOptions = categoriesFor(form.amount);
+
+  const setDescription = (description) => {
+    const suggestion = form.categoryTouched ? null : suggestCategory(description, state.categoryRules, form.amount);
+    setForm((f) => ({ ...f, description, category: suggestion || f.category }));
+  };
+  const setAmount = (amount) => {
+    const allowed = categoriesFor(amount);
+    setForm((f) => {
+      if (allowed.includes(f.category)) return { ...f, amount };
+      const fallback = Number(amount) < 0 ? "Other" : "Other Income";
+      return { ...f, amount, category: fallback, categoryTouched: false };
+    });
+  };
 
   const addTxn = () => {
     if (!form.description || !form.amount) return;
-    patch((s) => ({ ...s, transactions: [...s.transactions, { id: uid(), ...form, amount: Math.abs(Number(form.amount)) }] }));
-    setForm({ date: todayStr(), description: "", amount: "", category: "Other", type: "Variable", accountId: "" });
+    const { categoryTouched, ...txn } = form;
+    patch((s) => ({
+      ...s,
+      transactions: [...s.transactions, { id: uid(), ...txn, amount: Math.abs(Number(form.amount)) }],
+      categoryRules: learnCategory(s.categoryRules, form.description, form.category),
+    }));
+    setForm({ date: todayStr(), description: "", amount: "", category: "Other", type: "Variable", accountId: "", categoryTouched: false });
   };
   const removeTxn = (id) => patch((s) => ({ ...s, transactions: s.transactions.filter((t) => t.id !== id) }));
 
@@ -651,10 +715,10 @@ function Transactions({ state, patch, month, setMonth, importOpen, setImportOpen
         <Label>Quick add</Label>
         <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 100px 140px 130px 140px auto", gap: 8, alignItems: "center", marginTop: 6 }}>
           <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          <Input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <Input type="number" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-          <Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-            {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          <Input placeholder="Description" value={form.description} onChange={(e) => setDescription(e.target.value)} />
+          <Input type="number" placeholder="Amount" value={form.amount} onChange={(e) => setAmount(e.target.value)} />
+          <Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value, categoryTouched: true })}>
+            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
           <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
             {TXN_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -740,12 +804,15 @@ function ImportModal({ state, patch, onClose }) {
   const buildPreview = () => {
     const built = rows.map((r) => {
       const rawAmt = parseFloat(String(r[mapping.amount] || "0").replace(/[^0-9.\-]/g, "")) || 0;
+      const description = r[mapping.description] || "(no description)";
+      const fallback = rawAmt < 0 ? "Other" : "Other Income";
       return {
         id: uid(),
         date: r[mapping.date] || todayStr(),
-        description: r[mapping.description] || "(no description)",
+        description,
         amount: Math.abs(rawAmt),
-        category: rawAmt < 0 ? "Other" : "Other Income",
+        negative: rawAmt < 0,
+        category: suggestCategory(description, state.categoryRules, rawAmt) || fallback,
         type: "Variable",
         accountId: "",
       };
@@ -773,7 +840,8 @@ function ImportModal({ state, patch, onClose }) {
         date: r.date,
         description: r.description,
         amount: r.amount,
-        category: r.negative ? "Other" : "Other Income",
+        negative: r.negative,
+        category: suggestCategory(r.description, state.categoryRules, r.negative ? -r.amount : r.amount) || (r.negative ? "Other" : "Other Income"),
         type: "Variable",
         accountId: "",
       })));
@@ -792,7 +860,14 @@ function ImportModal({ state, patch, onClose }) {
   const removeRow = (id) => setPreview((p) => p.filter((r) => r.id !== id));
 
   const commit = () => {
-    patch((s) => ({ ...s, transactions: [...s.transactions, ...preview] }));
+    patch((s) => {
+      let categoryRules = s.categoryRules;
+      const transactions = preview.map(({ negative, ...t }) => {
+        categoryRules = learnCategory(categoryRules, t.description, t.category);
+        return t;
+      });
+      return { ...s, transactions: [...s.transactions, ...transactions], categoryRules };
+    });
     onClose();
   };
 
@@ -889,7 +964,7 @@ function ImportModal({ state, patch, onClose }) {
                         <td className="fp-num" style={{ padding: "5px 8px", textAlign: "right" }}>{fmt(r.amount)}</td>
                         <td style={{ padding: "5px 8px" }}>
                           <Select value={r.category} onChange={(e) => updateRow(r.id, "category", e.target.value)} style={{ padding: "4px 6px", fontSize: 12 }}>
-                            {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                            {categoriesFor(r.negative ? -1 : 1).map((c) => <option key={c} value={c}>{c}</option>)}
                           </Select>
                         </td>
                         <td style={{ padding: "5px 8px" }}>
