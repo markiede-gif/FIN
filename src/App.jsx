@@ -5,8 +5,9 @@ import {
 } from "recharts";
 import {
   LayoutGrid, ArrowLeftRight, PiggyBank, TrendingUp, ScrollText,
-  HelpCircle, Plus, Trash2, Upload, X, Check, AlertTriangle, Download,
+  HelpCircle, Plus, Trash2, Upload, X, Check, AlertTriangle, Download, FileText,
 } from "lucide-react";
+import { extractPdfLines, parseStatementLines } from "./lib/pdfStatement.js";
 
 /* ---------------------------------------------------------------------- */
 /*  Design tokens                                                          */
@@ -643,7 +644,7 @@ function Transactions({ state, patch, month, setMonth, importOpen, setImportOpen
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, margin: 0 }}>Transactions \u2014 {monthLabel(month)}</h2>
-        <Button variant="primary" onClick={() => setImportOpen(true)}><Upload size={14} /> Import CSV</Button>
+        <Button variant="primary" onClick={() => setImportOpen(true)}><Upload size={14} /> Import statement</Button>
       </div>
 
       <Card>
@@ -710,7 +711,10 @@ function ImportModal({ state, patch, onClose }) {
   const [rows, setRows] = useState([]);
   const [mapping, setMapping] = useState({ date: "", description: "", amount: "" });
   const [preview, setPreview] = useState([]);
+  const [pdfStatus, setPdfStatus] = useState("idle"); // idle | loading | error
+  const [pdfError, setPdfError] = useState("");
   const fileInput = useRef(null);
+  const pdfInput = useRef(null);
 
   const parseCsv = (text) => {
     const result = Papa.parse(text, { header: true, skipEmptyLines: true });
@@ -750,6 +754,40 @@ function ImportModal({ state, patch, onClose }) {
     setStep(3);
   };
 
+  const handlePdfFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPdfError("");
+    setPdfStatus("loading");
+    try {
+      const buffer = await file.arrayBuffer();
+      const lines = await extractPdfLines(buffer);
+      const parsed = parseStatementLines(lines);
+      if (parsed.length === 0) {
+        setPdfStatus("error");
+        setPdfError("No transaction-like rows were found. This PDF may be a scanned image (no selectable text) or use a layout this reader can't recognise — try CSV import instead.");
+        return;
+      }
+      setPreview(parsed.map((r) => ({
+        id: uid(),
+        date: r.date,
+        description: r.description,
+        amount: r.amount,
+        category: r.negative ? "Other" : "Other Income",
+        type: "Variable",
+        accountId: "",
+      })));
+      setPdfStatus("idle");
+      setStep(3);
+    } catch (err) {
+      console.error(err);
+      setPdfStatus("error");
+      setPdfError("Could not read this PDF. Make sure it isn't password-protected and try again.");
+    } finally {
+      if (pdfInput.current) pdfInput.current.value = "";
+    }
+  };
+
   const updateRow = (id, field, val) => setPreview((p) => p.map((r) => (r.id === id ? { ...r, [field]: val } : r)));
   const removeRow = (id) => setPreview((p) => p.filter((r) => r.id !== id));
 
@@ -762,17 +800,51 @@ function ImportModal({ state, patch, onClose }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 50 }}>
       <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 8, width: "100%", maxWidth: 780, maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 18px", borderBottom: `1px solid ${C.line}` }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17 }}>Import transactions from CSV</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17 }}>Import transactions</div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: C.textFaint, cursor: "pointer" }}><X size={18} /></button>
         </div>
         <div className="fp-scroll" style={{ padding: 18, overflowY: "auto" }}>
           {step === 1 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ fontSize: 13, color: C.textFaint }}>Upload a bank statement export, or paste CSV text directly.</div>
-              <input ref={fileInput} type="file" accept=".csv,text/csv" onChange={handleFile} style={{ fontSize: 13, color: C.textFaint }} />
-              <div style={{ fontSize: 12, color: C.textFainter }}>\u2014 or \u2014</div>
-              <textarea value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="date,description,amount&#10;2026-08-01,Salary,45000&#10;2026-08-02,Woolworths,-1250" rows={8} style={{ ...inputStyle, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }} />
-              <div><Button variant="primary" onClick={() => raw && parseCsv(raw)} disabled={!raw}>Parse pasted CSV</Button></div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <Label>PDF bank statement</Label>
+                <div style={{ fontSize: 12, color: C.textFaint }}>
+                  Upload a statement PDF. Rows are extracted automatically \u2014 dates, descriptions and amounts vary a lot
+                  by bank, so review every row carefully on the next screen before importing.
+                </div>
+                <input
+                  ref={pdfInput}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handlePdfFile}
+                  disabled={pdfStatus === "loading"}
+                  style={{ fontSize: 13, color: C.textFaint }}
+                />
+                {pdfStatus === "loading" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textFaint }}>
+                    <FileText size={13} /> Reading PDF\u2026
+                  </div>
+                )}
+                {pdfStatus === "error" && (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 12, color: C.rust }}>
+                    <AlertTriangle size={13} style={{ marginTop: 1, flexShrink: 0 }} /> {pdfError}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ flex: 1, height: 1, background: C.line }} />
+                <div style={{ fontSize: 11, color: C.textFainter, textTransform: "uppercase", letterSpacing: "0.05em" }}>or CSV</div>
+                <div style={{ flex: 1, height: 1, background: C.line }} />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ fontSize: 12, color: C.textFaint }}>Upload a bank statement CSV export, or paste CSV text directly.</div>
+                <input ref={fileInput} type="file" accept=".csv,text/csv" onChange={handleFile} style={{ fontSize: 13, color: C.textFaint }} />
+                <div style={{ fontSize: 12, color: C.textFainter }}>\u2014 or \u2014</div>
+                <textarea value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="date,description,amount&#10;2026-08-01,Salary,45000&#10;2026-08-02,Woolworths,-1250" rows={6} style={{ ...inputStyle, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }} />
+                <div><Button variant="primary" onClick={() => raw && parseCsv(raw)} disabled={!raw}>Parse pasted CSV</Button></div>
+              </div>
             </div>
           )}
           {step === 2 && (
